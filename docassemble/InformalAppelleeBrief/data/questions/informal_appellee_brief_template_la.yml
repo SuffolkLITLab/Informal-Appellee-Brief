@@ -3,8 +3,8 @@ include:
   - docassemble.AssemblyLine:assembly_line.yml
   - docassemble.ALAnyState:any_state.yml
   - docassemble.MassAccess:massaccess.yml
-  - docassemble.MassAppealsCourt:appeals-basic-questions.yml
   - docassemble.AffidavitofIndigencyMAVC:affidavit_body.yml
+  - docassemble.MassAppealsCourt:appeals-basic-questions.yml
 ---
 metadata:
   title: >-
@@ -64,8 +64,8 @@ code: |
   users[0].address.address
   set_progress(14)
   users[0].email
-  trial_court
   docket_number
+  trial_court
   set_progress(28)
   other_parties.there_are_any = True
   plaintiffs.gather()
@@ -74,7 +74,7 @@ code: |
   
   if other_party_has_attorney:
     other_parties[0].attorneys.there_are_any = True
-    other_parties[0].attorneys.gather()
+    other_parties[0].attorneys.gather(complete_attribute = "gathered_everything")
   else:
     other_parties[0].address.address
     other_parties[0].email
@@ -88,15 +88,8 @@ code: |
   set_progress(56)
   conclusion
   set_progress(70)
-  
-  explain_need_affidavit
-  #indigency_intro
-  fees['Filing fee'].waive = True
-  fees['Filing fee'].amount = 300.00
-  ask_affidavit_questions
-  if not is_indigent:
-    doesnt_qualify_interstitial
   method_of_service
+  how_to_serve
   service_date
   
   interview_order_informal_appellee_brief_template_la = True
@@ -109,6 +102,7 @@ mandatory: True
 code: |
   al_intro_screen
   informal_appellee_brief_template_la_intro
+  informal_overview
   interview_order_informal_appellee_brief_template_la
   signature_date
   users[0].signature
@@ -131,11 +125,24 @@ question: |
 subquestion: |
   This interview will help you complete your **Informal Appellee Brief.** Please wait to make any changes until the end of the interview! **Please use the "Review your answers" button to go back to previous screens. If you use the "undo" button while completing your interview, all work on later pages will be lost.**
   
-  Before you get started, please gather all documents from your lower court case proceedings.
-  
-  When you are finished, you have the choice to file a Supplemental Record Appendix with the Appeals Court. Filing a supplemental appendix is not mandatory unless the document or testimony you are referring to in your informal appellee brief was not included in the appellant's record appendix or transcript(s). **(Note for LIT Clinic: section on the record appendix and instructions will be added to end of interview later on)**
+  Before you get started, please gather all documents from your lower court case proceedings, and any documents from this appeals court case up to this point.
   
   Most people take about _______ minutes to finish this interview.
+---
+id: informal overview
+continue button field: informal_overview
+question: |
+  The Informal Brief Pilot Program
+subquestion: |
+  The Appeals Court launched this program to allow self-represented ("pro se") parties file an “informal” brief instead of a formal brief that strictly complies with the Massachusetts Rules of Appellate Procedure, which is what the Appeals Court typically requires.
+  
+  This program is only for cases entered on the court’s “panel” docket, for decision by a panel of Justices.
+  
+  This program does not apply in the single justice session of the Appeals Court, or to attorneys, whether they are representing themselves or responding to an informal brief.
+  
+  An informal brief is different from a formal brief in that it does not need a table of contents, table of authorities, corporate disclosure statement, summary of argument, or addendum, or need to comply with the standard rules regarding margins, font, and the certificate of compliance.  An informal brief does, however, still need to comply with the rules about impounded and confidential information.
+  
+  Feel free to read more about this program before proceeding: https://www.mass.gov/info-details/appeals-court-informal-brief-pilot-program/
 ---
 id: Brief Information
 continue button field: information
@@ -161,9 +168,14 @@ fields:
 ---
 id: Docket Number
 question: |
-  What is the **Trial Court** docket number for your case?
+  What is the **Appeals Court** docket number for your case?
+subquestion: |
+  This docket number is different from your Trial Court docket number. You can find your Appeals Court docket number on the **Notice of Entry** you should have received when this case was first appealed.
 fields: 
   - Docket number: docket_number
+    hint: e.g., 1234-P-1234
+  - note: |
+      The format of your docket number should be: ####-P-####
 ---
 id: user role
 question: |
@@ -295,15 +307,6 @@ fields:
     input type: area
     rows: 10
 ---
-id: explain_need_affidavit
-question: |
-  You may qualify for a fee waiver.
-subquestion: |
-  There is a filing fee, but you may qualify to get the fees waived.
-  
-  We will ask you questions to help you find out a little later.
-continue button field: explain_need_affidavit
----
 id: method of service
 question: |
   % if other_party_has_attorney: 
@@ -327,12 +330,37 @@ subquestion: |
   % endif
   
   You should **not** provide a copy of your Affidavit of Indigency, if any, to anyone except the Appeals Court.  
-field: method_of_service
-dropdown:
-  - Efile and serve (efilema.com): efile and serve (efilema.com)
-  - Email: email
-  - Mail: mail
-  - Hand delivery: hand delivery
+fields: 
+  - Method of Service: method_of_service
+    choices: 
+      - Efile and serve (efilema.com): efile and serve (efilema.com)
+      - Email: email
+      - Mail: mail
+      - Hand delivery: hand delivery
+---
+id: how to serve
+continue button field: how_to_serve
+question: |
+  % if method_of_service == 'efile and serve (efilema.com)':
+      Efiling
+  % elif method_of_service == 'email':
+      Email
+  % elif method_of_service == 'mail':
+      Mail
+  % else: 
+      Hand Delivery
+  % endif
+subquestion: |
+  % if method_of_service == 'efile and serve (efilema.com)':
+      To efile your documents, open this [link](https://massachusetts.tylertech.cloud/OfsWeb) now, and return to it when you complete this interview to complete the efiling.
+  % elif method_of_service == 'email':
+      To email your documents, download all documents at the end of this interview and use your personal email to deliver them to ${ other_parties } at ${ other_parties[0].email }
+  % elif method_of_service == 'mail':
+      To mail your documents, download and print all documents at the end of this interview and mail them to ${ other_parties } at ${ other_parties[0].address.address }
+  % else: 
+      To hand deliver your documents, download and print all documents at the end of this interview and deliver them to ${ other_parties } at ${ other_parties[0].address.address }
+  % endif
+mandatory: True
 ---
 objects:
   - attorneys: ALPeopleList.using(there_are_any=True)
@@ -348,7 +376,7 @@ code: |
   x.name.first
   x.address.address
   x.email
-  x.gathered_everthing = True
+  x.gathered_everything = True
 ---
 id: other parties another attorney
 question: |
